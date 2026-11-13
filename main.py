@@ -18,6 +18,13 @@ class Dispositivo(BaseModel):
     activo: bool = True
 
 
+class DispositivoParcial(BaseModel):
+    nombre: str | None = None
+    tipo: str | None = None
+    ip: str | None = None
+    activo: bool | None = None
+
+
 inventario = [
     Dispositivo(nombre="R1", tipo="router", ip="10.0.0.1"),
     Dispositivo(nombre="SW1", tipo="switch", ip="10.0.0.10", activo=False),
@@ -54,6 +61,7 @@ async def obtener(nombre: str):
     return equipo
 
 
+
 @app.post("/dispositivos", status_code=201)
 async def crear(nuevo: Dispositivo):
     """Da de alta un equipo. Rechaza nombres repetidos."""
@@ -64,3 +72,26 @@ async def crear(nuevo: Dispositivo):
         )
     inventario.append(nuevo)
     return nuevo
+
+@app.put("/dispositivos/{nombre}")
+async def reemplazar(nombre: str, datos: Dispositivo):
+    """Sustituye por completo el registro de un equipo."""
+    equipo = buscar(nombre)
+    if equipo is None:
+        raise HTTPException(status_code=404,
+                            detail=f"No existe el equipo {nombre}")
+    inventario[inventario.index(equipo)] = datos
+    return datos
+
+
+@app.patch("/dispositivos/{nombre}")
+async def modificar(nombre: str, cambios: DispositivoParcial):
+    """Modifica solo los campos enviados."""
+    equipo = buscar(nombre)
+    if equipo is None:
+        raise HTTPException(status_code=404,
+                            detail=f"No existe el equipo {nombre}")
+    for campo, valor in cambios.model_dump(exclude_unset=True).items():
+        setattr(equipo, campo, valor)
+    return equipo
+
