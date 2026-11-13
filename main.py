@@ -5,7 +5,7 @@ Alumno: Miguel Angel Garcia
 Matrícula: 125053642
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
 
 app = FastAPI(title="Inventario de red")
@@ -60,26 +60,27 @@ async def obtener(nombre: str):
         )
     return equipo
 
-
-
 @app.post("/dispositivos", status_code=201)
 async def crear(nuevo: Dispositivo):
     """Da de alta un equipo. Rechaza nombres repetidos."""
     if buscar(nuevo.nombre) is not None:
         raise HTTPException(
             status_code=409,
-            detail=f"Ya existe el equipo {nuevo.nombre}",
+            detail=f"Ya existe el equipo {nuevo.nombre}"
         )
     inventario.append(nuevo)
     return nuevo
+
 
 @app.put("/dispositivos/{nombre}")
 async def reemplazar(nombre: str, datos: Dispositivo):
     """Sustituye por completo el registro de un equipo."""
     equipo = buscar(nombre)
     if equipo is None:
-        raise HTTPException(status_code=404,
-                            detail=f"No existe el equipo {nombre}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"No existe el equipo {nombre}"
+        )
     inventario[inventario.index(equipo)] = datos
     return datos
 
@@ -89,9 +90,23 @@ async def modificar(nombre: str, cambios: DispositivoParcial):
     """Modifica solo los campos enviados."""
     equipo = buscar(nombre)
     if equipo is None:
-        raise HTTPException(status_code=404,
-                            detail=f"No existe el equipo {nombre}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"No existe el equipo {nombre}"
+        )
     for campo, valor in cambios.model_dump(exclude_unset=True).items():
         setattr(equipo, campo, valor)
     return equipo
 
+
+@app.delete("/dispositivos/{nombre}", status_code=204)
+async def eliminar(nombre: str):
+    """Da de baja un equipo del inventario."""
+    equipo = buscar(nombre)
+    if equipo is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No existe el equipo {nombre}"
+        )
+    inventario.remove(equipo)
+    return Response(status_code=204)
